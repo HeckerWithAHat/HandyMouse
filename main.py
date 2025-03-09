@@ -8,12 +8,14 @@ import secrets
 
 password = None
 
-tokens = []
+tokens = ['a2819f48ce87760ea1b5feca7adc727c']
 is_dragging = False
 
-async def handle_connection(websocket, path):
+async def handle_connection(websocket):
     try:
         async for message in websocket:
+            global is_dragging
+            print(f"Received: {message}")
             message = message.split('&')
             if message[0].split(':')[0] == "auth":
                 root = tk.Tk()
@@ -22,7 +24,7 @@ async def handle_connection(websocket, path):
                 if result == 'yes':
                     token = secrets.token_hex(16)
                     tokens.append(token)
-                    websocket.send(f"auth:success&token:{token}")
+                    await websocket.send(f"auth:success&token:{token}")
                 else:
                     websocket.send("auth:failed")
                 # use tkinter to ask if authorize connection
@@ -90,12 +92,8 @@ async def main():
         print("WebSocket server started at ws://0.0.0.0:8000")
         await asyncio.Future()  # Run forever
 
-try:
-    p = getpass.getpass(prompt="Enter the password you want to set with this App")
-except Exception as error:
-    print('ERROR', error)
-else:
-    print(p)
-    password = p
+
 if __name__ == "__main__":
+    is_dragging = False
+
     asyncio.run(main())
