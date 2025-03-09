@@ -1,15 +1,101 @@
-from flask import Flask, request, render_template, send_file
-import spotifyapp
-import os
+import asyncio
+import websockets
+import getpass
+import pyautogui
+import tkinter as tk
+from tkinter import messagebox
+import secrets
 
-app = Flask(__name__)
+password = None
 
-app.route("/")
-def index():
-    return "Nothing Here. This is the server for the Glove Project."
+tokens = []
+is_dragging = False
 
+async def handle_connection(websocket, path):
+    try:
+        async for message in websocket:
+            message = message.split('&')
+            if message[0].split(':')[0] == "auth":
+                root = tk.Tk()
+                root.withdraw()
+                result = messagebox.askquestion("Connection", "Do you want to connect?").lower()
+                if result == 'yes':
+                    token = secrets.token_hex(16)
+                    tokens.append(token)
+                    websocket.send(f"auth:success&token:{token}")
+                else:
+                    websocket.send("auth:failed")
+                # use tkinter to ask if authorize connection
+                # if yes, create token secrets.token_hex(16) and store it in tokens, then send the token
+            elif message[0].split(':')[0] == "token" and message[0].split(':')[1] in tokens: # token:<token>&command:<command>
+                if message[1].split(':')[0] == "command":
+                    command = message[1].split(':')[1]
+                    match command:
+                        case "mousemoveup":
+                            if is_dragging:
+                                pyautogui.drag(0,-15,duration=0.1)
+                            else:
+                                pyautogui.move(0,-15,duration=0.1)
+                        case "mousemovedown":
+                            if is_dragging:
+                                pyautogui.drag(0,15,duration=0.1)
+                            else:
+                                pyautogui.move(0,15,duration=0.1)
+                        case "mousemoveleft":
+                            if is_dragging:
+                                pyautogui.drag(-15,0,duration=0.1)
+                            else:
+                                pyautogui.move(-15,0,duration=0.1)
+                        case "mousemoveright":
+                            if is_dragging:
+                                pyautogui.drag(15,0,duration=0.1)
+                            else:
+                                pyautogui.move(15,0,duration=0.1)
+                        case "mousemoveupleft":
+                            if is_dragging:
+                                pyautogui.drag(-15,-15,duration=0.1)
+                            else:
+                                pyautogui.move(-15,-15,duration=0.1)
+                        case "mousemovedownright":
+                            if is_dragging:
+                                pyautogui.drag(15,15,duration=0.1)
+                            else:
+                                pyautogui.move(15,15,duration=0.1)
+                        case "mousemovedownleft":
+                            if is_dragging:
+                                pyautogui.drag(-15,15,duration=0.1)
+                            else:
+                                pyautogui.move(-15,15,duration=0.1)
+                        case "mousemoveupright":
+                            if is_dragging:
+                                pyautogui.drag(15,-15,duration=0.1)
+                            else:
+                                pyautogui.move(15,-15,duration=0.1)
+                        case "mouseleftclick":
+                            pyautogui.mouseDown()
+                            pyautogui.mouseUp()
+                        case "mouserightclick":
+                            pyautogui.mouseDown(button='right')
+                            pyautogui.mouseUp(button='right')
+                        case "mousedowntoggle":
+                            is_dragging = not is_dragging
+                # run pyautogui stuff 
+            print(f"Received: {message}")
+            
+    except websockets.exceptions.ConnectionClosed as e:
+        print(f"Connection closed: {e}")
 
-app.register_blueprint(spotifyapp.bp)
+async def main():
+    async with websockets.serve(handle_connection, "0.0.0.0", 8000):
+        print("WebSocket server started at ws://0.0.0.0:8000")
+        await asyncio.Future()  # Run forever
 
+try:
+    p = getpass.getpass(prompt="Enter the password you want to set with this App")
+except Exception as error:
+    print('ERROR', error)
+else:
+    print(p)
+    password = p
 if __name__ == "__main__":
-    app.run(debug="true", host="0.0.0.0", port=5000)
+    asyncio.run(main())
