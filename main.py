@@ -8,7 +8,7 @@ import secrets
 
 password = None
 
-tokens = ['a2819f48ce87760ea1b5feca7adc727c']
+tokens = ['']
 is_dragging = False
 
 async def handle_connection(websocket):
